@@ -2,10 +2,14 @@
 #include <Adafruit_BMP280.h>
 #include <Adafruit_MPU6050.h>
 #include <DHT.h>
+#include <LoRa.h>
 
-#define TMP_PIN_1 23
-#define HUM_PIN_1 13
-#define THE_PIN_1 32
+#define TMP_PIN_1       4
+#define HUM_PIN_1       13
+#define THE_PIN_1       32
+#define LORA_RST_PIN    34
+#define LORA_DIO0_PIN   35
+#define LORA_NSS_PIN    5
 
 class API {
 
@@ -32,6 +36,8 @@ public:
         // */
         m_hum.begin();
         m_gyr.begin();
+
+        lora_init();
     }
 
     float tmp_ds18() {
@@ -123,6 +129,39 @@ public:
         x = acc.orientation.x;
         y = acc.orientation.y;
         z = acc.orientation.z;
+    }
+
+    void lora_init() {
+        const long FREQ = 433.800e6; // channel 30
+        
+        LoRa.setPins(LORA_NSS_PIN, LORA_RST_PIN, LORA_DIO0_PIN);
+
+        if(!LoRa.begin(FREQ)) {
+            for(;;)
+                Serial.println("LoRa begin() failed!");
+        }
+
+        // Calculated for ~500 bps (sf11) or ~900 bps (sf10) 
+        LoRa.setCodingRate4(5);
+        LoRa.setSpreadingFactor(10);
+        LoRa.setSignalBandwidth(125000);
+       
+        LoRa.setTxPower(0); // MAX POWER (20 dBm - 100mW)
+    }
+
+    void lora_send() {
+        // FIXME: test frame, replaace with pointer passed to function
+        const size_t FRAME_SIZE = 291/8;
+        const unsigned char frame [FRAME_SIZE] = {'c', 's', 'u', 's'};
+
+        while(!LoRa.beginPacket()){
+            Serial.println("[!] LoRa currently TXing - blocking wait...");
+        }
+        
+        LoRa.write(frame, FRAME_SIZE);
+ 
+        LoRa.endPacket(true); // true - async mode (don't wait for TX end)
+        Serial.println("LoRa packet sent!");
     }
 
 private:
