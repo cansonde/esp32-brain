@@ -82,6 +82,7 @@ void setup() {
 void loop() {
 
   api.gps_update();
+  api.particle_update();
 
   Serial.printf("TMP DS18: %f\n", api.tmp_ds18());
   Serial.printf("TMP DHT : %f\n", api.tmp_dht());
@@ -96,9 +97,10 @@ void loop() {
   Serial.printf("GPS_NUM : %d\n", api.gps_number_of_satellites());
   Serial.printf("GPS_PREC: %f\n", api.gps_horizontal_precision());
   Serial.printf("GPS_ALT : %f\n", api.gps_altitude());
+  Serial.printf("PAR     : %d\n", api.par_cnt());
   Serial.printf("----------\n");
 
-  api.lora_send();
+  //pi.lora_send();
 
   delay(300);
 

@@ -10,29 +10,31 @@
 #define LORA_RST_PIN    34
 #define LORA_DIO0_PIN   35
 #define LORA_NSS_PIN    5
+#define SER_RX_PIN      22
 
 class API {
 
 public:
 
-    API() : m_one(TMP_PIN_1), m_tmp(&m_one), m_hum(HUM_PIN_1, DHT11) { }
+    API() : m_one(TMP_PIN_1), m_tmp(&m_one), m_hum(HUM_PIN_1, DHT11), m_ser(1) { }
     
     void init() {
         Serial2.begin(9600);
+        m_ser.begin(9600, SERIAL_8N1, SER_RX_PIN, -1);
 
         m_tmp.begin();
         // /*
-        if (!m_bar.begin()) {
-            for (;;) {
-                Serial.println("Count not find BMP280 sensor");
-            }
-        }
+        // if (!m_bar.begin()) {
+        //     for (;;) {
+        //         Serial.println("Count not find BMP280 sensor");
+        //     }
+        // }
 
-        m_bar.setSampling(Adafruit_BMP280::MODE_NORMAL,
-                          Adafruit_BMP280::SAMPLING_X2,
-                          Adafruit_BMP280::SAMPLING_X16,
-                          Adafruit_BMP280::FILTER_X16,
-                          Adafruit_BMP280::STANDBY_MS_500);
+        // m_bar.setSampling(Adafruit_BMP280::MODE_NORMAL,
+        //                   Adafruit_BMP280::SAMPLING_X2,
+        //                   Adafruit_BMP280::SAMPLING_X16,
+        //                   Adafruit_BMP280::FILTER_X16,
+        //                   Adafruit_BMP280::STANDBY_MS_500);
         // */
         m_hum.begin();
         m_gyr.begin();
@@ -98,8 +100,11 @@ public:
     void gps_update() {
         Serial.println("Updating\n");
         Serial.flush();
+        return;
+        
+        // FIXME: Add timeout
         while (Serial2.available() > 0) {
-            String msg = Serial2.readStringUntil('\n');
+            String msg = Serial2.readStringUntil('\n');                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
             
             int index = msg.indexOf("$GPGGA");
 
@@ -164,6 +169,30 @@ public:
         Serial.println("LoRa packet sent!");
     }
 
+    void particle_update() {
+        if(!m_ser.available())
+            return;
+        
+        String line_read = "";
+        while(m_ser.available()) {
+            m_ser.setTimeout(10);
+            
+            String new_line  = m_ser.readStringUntil('\n');
+            if(new_line.indexOf('x') == -1)
+                break; // this is the last line that is not valid
+            
+            line_read = new_line;
+        }
+
+        if(line_read != "") {
+            m_particle_count = atoi(line_read.substring(0, line_read.length()-2).c_str());
+        }
+    }
+
+    int par_cnt() {
+        return m_particle_count;
+    }
+
 private:
 
     OneWire           m_one;
@@ -171,6 +200,7 @@ private:
     Adafruit_BMP280   m_bar; // bmp280
     DHT               m_hum; // dht
     Adafruit_MPU6050  m_gyr; // mpu6050
+    HardwareSerial    m_ser; // hardware serial 1
 
     float             m_gps_time;
     float             m_gps_latitute;
@@ -180,5 +210,6 @@ private:
     float             m_gps_horizontal_precision;
     float             m_gps_altitude;
     float             m_gps_geoid_height;
+    int               m_particle_count;
 
 };
