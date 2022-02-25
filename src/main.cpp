@@ -51,24 +51,30 @@ void setup() {
 
   // api.init();
 }
+
 void loop() {
 
-  ledcWriteNote(0, NOTE_C, 4);
+  ledcWriteTone(0, 2100);
   delay(500);
-  ledcWriteNote(0, NOTE_D, 4);
+  ledcWriteTone(0, 1000);
   delay(500);
-  ledcWriteNote(0, NOTE_E, 4);
-  delay(500);
-  ledcWriteNote(0, NOTE_F, 4);
-  delay(500);
-  ledcWriteNote(0, NOTE_G, 4);
-  delay(500);
-  ledcWriteNote(0, NOTE_A, 4);
-  delay(500);
-  ledcWriteNote(0, NOTE_B, 4);
-  delay(500);
-  ledcWriteNote(0, NOTE_C, 5);
-  delay(500);
+
+  // ledcWriteNote(0, NOTE_C, 4);
+  // delay(500);
+  // ledcWriteNote(0, NOTE_D, 4);
+  // delay(500);
+  // ledcWriteNote(0, NOTE_E, 4);
+  // delay(500);
+  // ledcWriteNote(0, NOTE_F, 4);
+  // delay(500);
+  // ledcWriteNote(0, NOTE_G, 4);
+  // delay(500);
+  // ledcWriteNote(0, NOTE_A, 4);
+  // delay(500);
+  // ledcWriteNote(0, NOTE_B, 4);
+  // delay(500);
+  // ledcWriteNote(0, NOTE_C, 5);
+  // delay(500);
 
 
   return;
