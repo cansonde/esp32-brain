@@ -99,7 +99,6 @@ void loop() {
   Serial.printf("GPS_ALT : %f\n", api.gps_altitude());
   Serial.printf("PAR     : %d\n", api.par_cnt());
   Serial.printf("----------\n");
-
   //pi.lora_send();
 
   delay(300);

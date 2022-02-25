@@ -23,19 +23,17 @@ public:
         m_ser.begin(9600, SERIAL_8N1, SER_RX_PIN, -1);
 
         m_tmp.begin();
-        // /*
-        // if (!m_bar.begin()) {
-        //     for (;;) {
-        //         Serial.println("Count not find BMP280 sensor");
-        //     }
-        // }
+        
+        if (!m_bar.begin()) {
+            Serial.println("[!] Count not find BMP280 sensor");
+            delay(1000);
+        }
 
-        // m_bar.setSampling(Adafruit_BMP280::MODE_NORMAL,
-        //                   Adafruit_BMP280::SAMPLING_X2,
-        //                   Adafruit_BMP280::SAMPLING_X16,
-        //                   Adafruit_BMP280::FILTER_X16,
-        //                   Adafruit_BMP280::STANDBY_MS_500);
-        // */
+        m_bar.setSampling(Adafruit_BMP280::MODE_NORMAL,
+                          Adafruit_BMP280::SAMPLING_X2,
+                          Adafruit_BMP280::SAMPLING_X16,
+                          Adafruit_BMP280::FILTER_X16,
+                          Adafruit_BMP280::STANDBY_MS_500);
         m_hum.begin();
         m_gyr.begin();
 
@@ -98,14 +96,18 @@ public:
     }
 
     void gps_update() {
-        Serial.println("Updating\n");
-        Serial.flush();
-        return;
+        Serial.println("Updating");
+        //Serial.flush();
         
-        // FIXME: Add timeout
+        unsigned int time_wait = millis();
         while (Serial2.available() > 0) {
-            String msg = Serial2.readStringUntil('\n');                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
-            
+            Serial2.setTimeout(200);
+
+            String msg = Serial2.readStringUntil('\n');
+
+            if(millis() - time_wait > 2000)
+                return;
+
             int index = msg.indexOf("$GPGGA");
 
             if (index == -1) {
@@ -142,8 +144,8 @@ public:
         LoRa.setPins(LORA_NSS_PIN, LORA_RST_PIN, LORA_DIO0_PIN);
 
         if(!LoRa.begin(FREQ)) {
-            for(;;)
-                Serial.println("LoRa begin() failed!");
+            Serial.println("[!] LoRa begin() failed!");
+            delay(1000);
         }
 
         // Calculated for ~500 bps (sf11) or ~900 bps (sf10) 
@@ -159,7 +161,12 @@ public:
         const size_t FRAME_SIZE = 291/8;
         const unsigned char frame [FRAME_SIZE] = {'c', 's', 'u', 's'};
 
+        unsigned int time_start = millis();
         while(!LoRa.beginPacket()){
+            if(millis() - time_start > 1000) {
+                return;
+            }
+            
             Serial.println("[!] LoRa currently TXing - blocking wait...");
         }
         
@@ -174,9 +181,13 @@ public:
             return;
         
         String line_read = "";
+        unsigned int time_wait = millis();
         while(m_ser.available()) {
             m_ser.setTimeout(10);
             
+            if(millis() - time_wait > 200)
+                return;
+
             String new_line  = m_ser.readStringUntil('\n');
             if(new_line.indexOf('x') == -1)
                 break; // this is the last line that is not valid
