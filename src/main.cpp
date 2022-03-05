@@ -49,15 +49,15 @@ void setup() {
   //   }
   // }
 
-  // api.init();
+  api.init();
 }
 
 void loop() {
 
-  ledcWriteTone(0, 2100);
-  delay(500);
-  ledcWriteTone(0, 1000);
-  delay(500);
+  // ledcWriteTone(0, 2100);
+  // delay(500);
+  // ledcWriteTone(0, 1000);
+   delay(500);
 
   // ledcWriteNote(0, NOTE_C, 4);
   // delay(500);
@@ -84,7 +84,7 @@ void loop() {
   Serial.printf("TMP DS18: %f\n", api.tmp_ds18());
   Serial.printf("TMP DHT : %f\n", api.tmp_dht());
   Serial.printf("TMP BMP : %f\n", api.tmp_bmp());
-  // Serial.printf("TMP GYR : %f\n", api.tmp_gyr());
+  Serial.printf("TMP GYR : %f\n", api.tmp_gyr());
   Serial.printf("HUM DHT : %f\n", api.hum_dht());
   Serial.printf("BAR BMP : %f\n", api.bar_bmp());
   Serial.printf("GPS TIME: %f\n", api.gps_time());
@@ -95,8 +95,9 @@ void loop() {
   Serial.printf("GPS_PREC: %f\n", api.gps_horizontal_precision());
   Serial.printf("GPS_ALT : %f\n", api.gps_altitude());
   Serial.printf("PAR     : %d\n", api.par_cnt());
+  Serial.printf("BAT_VOLT: %f\n", api.bat_volt());
   Serial.printf("----------\n");
-  //pi.lora_send();
+  api.lora_send();
 
   delay(300);
 

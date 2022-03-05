@@ -7,20 +7,34 @@
 #define TMP_PIN_1       4
 #define HUM_PIN_1       13
 #define THE_PIN_1       32
-#define LORA_RST_PIN    34
+#define LORA_RST_PIN    12
 #define LORA_DIO0_PIN   35
 #define LORA_NSS_PIN    5
-#define SER_RX_PIN      22
+#define SER_RX_PIN      33
+#define SER_GPS_RX_PIN  16
+#define BAT_PIN         25
+
+/* additional pins
+    SPI 19 18 23
+    I2C 22 21
+    UART 16(GPS) 33(PART)
+
+SD_CS_PIN 2ddrd7
+BUZZ_PIN  15
+BAT_PIN 25
+*/
+
 
 class API {
 
 public:
 
-    API() : m_one(TMP_PIN_1), m_tmp(&m_one), m_hum(HUM_PIN_1, DHT11), m_ser(1) { }
+    API() : m_one(TMP_PIN_1), m_tmp(&m_one), m_hum(HUM_PIN_1, DHT11), m_ser(1), m_gser(2) { }
     
     void init() {
-        Serial2.begin(9600);
+        //m_gser.begin(9600);
         m_ser.begin(9600, SERIAL_8N1, SER_RX_PIN, -1);
+        m_gser.begin(9600, SERIAL_8N1, SER_GPS_RX_PIN, -1);
 
         m_tmp.begin();
         
@@ -38,6 +52,9 @@ public:
         m_gyr.begin();
 
         lora_init();
+
+        while(m_gser.available())
+            m_gser.read();
     }
 
     float tmp_ds18() {
@@ -100,11 +117,11 @@ public:
         //Serial.flush();
         
         unsigned int time_wait = millis();
-        while (Serial2.available() > 0) {
-            Serial2.setTimeout(200);
-
-            String msg = Serial2.readStringUntil('\n');
-
+        while (m_gser.available() > 0) {
+            m_gser.setTimeout(20);
+            
+            String msg = m_gser.readStringUntil('\n');
+            Serial.printf("m: %s\n", msg.c_str());
             if(millis() - time_wait > 2000)
                 return;
 
@@ -153,13 +170,23 @@ public:
         LoRa.setSpreadingFactor(10);
         LoRa.setSignalBandwidth(125000);
        
-        LoRa.setTxPower(0); // MAX POWER (20 dBm - 100mW)
+        LoRa.setTxPower(20); // MAX POWER (20 dBm - 100mW)
     }
 
+    static const size_t FRAME_SIZE = 291/8;
+    unsigned char frame [FRAME_SIZE];
     void lora_send() {
         // FIXME: test frame, replaace with pointer passed to function
-        const size_t FRAME_SIZE = 291/8;
-        const unsigned char frame [FRAME_SIZE] = {'c', 's', 'u', 's'};
+        for(int i=0; i<FRAME_SIZE; i++)
+            frame[i] = 0; 
+        
+        frame[0] = 'c';
+        frame[1] = 's';
+        frame[2] = 'u';
+        frame[3] = 's';    
+        frame[4] = '\0';
+
+        
 
         unsigned int time_start = millis();
         while(!LoRa.beginPacket()){
@@ -204,6 +231,10 @@ public:
         return m_particle_count;
     }
 
+    float bat_volt() {
+        return ((analogRead(BAT_PIN) * 3.3)/4095)*3.f;
+    }
+
 private:
 
     OneWire           m_one;
@@ -211,7 +242,7 @@ private:
     Adafruit_BMP280   m_bar; // bmp280
     DHT               m_hum; // dht
     Adafruit_MPU6050  m_gyr; // mpu6050
-    HardwareSerial    m_ser; // hardware serial 1
+    HardwareSerial    m_ser, m_gser; // hardware serial 1
 
     float             m_gps_time;
     float             m_gps_latitute;
