@@ -3,6 +3,7 @@
 #include <SD.h>
 
 #include "api.hpp"
+#include "packet.h"
 
 #define THERM_PIN 32
 #define SD_CS_PIN 27
@@ -13,93 +14,90 @@ API api;
 
 void setup() {
   Serial.begin(9600);
-
-  // if (!SD.begin(SD_CS_PIN)) {
-  //   Serial.println("SD card inicialization failed");
-  //   for (;;) {
-  //     Serial.println("Cannot init SD card\n");
-  //   }
-  // }
-
-  // 2,1 kHz
-
-
+  delay(3000);
   ledcAttachPin(BUZZ_PIN, 0);
+
+  if (!SD.begin(SD_CS_PIN)) {
+    Serial.println("SD card inicialization failed");
+    delay(1000);
+  }
   
-  // String filename = "cansat";
-  // int file_number = 0;
+  String filename = "cansat";
+  int file_number = 0;
+  // dont overwrite existing files
+  while (SD.exists((char*) (void*) ("/" + filename + String(file_number) + ".dat").c_str())) {
+    file_number++;
+  }
 
-  // // dont overwrite existing files
-  // while (SD.exists((char*) (void*) (filename + String(file_number) + ".dat").c_str())) {
-  //   file_number++;
-  // }
-
-  // filename = filename + String(file_number) + ".dat";
-
-  // Serial.println("Opening: " + filename);
-
-  // cansat_data = SD.open("/cansat0.dat", FILE_WRITE);
-  // // cansat_data = SD.open((char*) (void*) filename.c_str(), FILE_WRITE);
-
-  // if (!cansat_data) {
-  //   Serial.println("Openinng file in SD card failed");
-  //   cansat_data.close();
-  //   for (;;) {
-  //     Serial.println("Cannot open a file: " + filename);
-  //   }
-  // }
+  filename = "/" + filename + String(file_number) + ".dat";
+  Serial.println("Opening: " + filename);
+  cansat_data = SD.open((char*) (void*) filename.c_str(), FILE_WRITE);
+  if (!cansat_data) {
+    Serial.println("Openinng file in SD card failed");
+    cansat_data.close();
+    delay(100);
+  }
 
   api.init();
 }
 
+void sd_save_frame(String data);
+
+unsigned int ms_1000_timer = 0;
+unsigned int ms_100_timer = 0;
+
+bool tone = false;
 void loop() {
+  bool ms_100_ev_en = (millis()-ms_100_timer) > 100;
+  bool ms_1000_ev_en = (millis()-ms_1000_timer) > 1000;
+  if(!ms_100_ev_en)
+    return; // continue
+  
+  // if(ms_1000_ev_en) {
+  //   if(tone)
+  //     ledcWriteTone(0, 2100);
+  //   else
+  //     ledcWriteTone(0, 1000);
+  //   tone ^= 1;
+  // }
 
-  // ledcWriteTone(0, 2100);
-  // delay(500);
-  // ledcWriteTone(0, 1000);
-   delay(500);
+  if(ms_1000_ev_en) {
+    api.gps_update();
+    api.particle_update();
+  
+    Serial.printf("TMP DS18: %f\n", api.tmp_ds18());
+    Serial.printf("TMP DHT : %f\n", api.tmp_dht());
+    Serial.printf("TMP BMP : %f\n", api.tmp_bmp());
+    Serial.printf("TMP GYR : %f\n", api.tmp_gyr());
+    Serial.printf("HUM DHT : %f\n", api.hum_dht());
+    Serial.printf("BAR BMP : %f\n", api.bar_bmp());
+    Serial.printf("GPS TIME: %f\n", api.gps_time());
+    Serial.printf("GPS_LAT : %f\n", api.gps_latitute());
+    Serial.printf("GPS_LON : %f\n", api.gps_longitude());
+    Serial.printf("GPS_QUA : %d\n", api.gps_quality());
+    Serial.printf("GPS_NUM : %d\n", api.gps_number_of_satellites());
+    Serial.printf("GPS_PREC: %f\n", api.gps_horizontal_precision());
+    Serial.printf("GPS_ALT : %f\n", api.gps_altitude());
+    Serial.printf("PAR     : %d\n", api.par_cnt());
+    Serial.printf("BAT_VOLT: %f\n", api.bat_volt());
+    float x,y,z;
+    api.gyr_acc(x,y,z);
+    Serial.printf("ACC : %f %f %f\n", x, y, z);
+    Serial.printf("----------\n");
+  }
 
-  // ledcWriteNote(0, NOTE_C, 4);
-  // delay(500);
-  // ledcWriteNote(0, NOTE_D, 4);
-  // delay(500);
-  // ledcWriteNote(0, NOTE_E, 4);
-  // delay(500);
-  // ledcWriteNote(0, NOTE_F, 4);
-  // delay(500);
-  // ledcWriteNote(0, NOTE_G, 4);
-  // delay(500);
-  // ledcWriteNote(0, NOTE_A, 4);
-  // delay(500);
-  // ledcWriteNote(0, NOTE_B, 4);
-  // delay(500);
-  // ledcWriteNote(0, NOTE_C, 5);
-  // delay(500);
+  String frs = getframe(api, ms_1000_ev_en); // also sends frame
+  if(ms_1000_ev_en) {
+    api.lora_send(frs);
+  }
+  if(ms_100_ev_en) {
+    sd_save_frame(frs);
+  }
 
-
-
-  api.gps_update();
-  api.particle_update();
-
-  Serial.printf("TMP DS18: %f\n", api.tmp_ds18());
-  Serial.printf("TMP DHT : %f\n", api.tmp_dht());
-  Serial.printf("TMP BMP : %f\n", api.tmp_bmp());
-  Serial.printf("TMP GYR : %f\n", api.tmp_gyr());
-  Serial.printf("HUM DHT : %f\n", api.hum_dht());
-  Serial.printf("BAR BMP : %f\n", api.bar_bmp());
-  Serial.printf("GPS TIME: %f\n", api.gps_time());
-  Serial.printf("GPS_LAT : %f\n", api.gps_latitute());
-  Serial.printf("GPS_LON : %f\n", api.gps_longitude());
-  Serial.printf("GPS_QUA : %d\n", api.gps_quality());
-  Serial.printf("GPS_NUM : %d\n", api.gps_number_of_satellites());
-  Serial.printf("GPS_PREC: %f\n", api.gps_horizontal_precision());
-  Serial.printf("GPS_ALT : %f\n", api.gps_altitude());
-  Serial.printf("PAR     : %d\n", api.par_cnt());
-  Serial.printf("BAT_VOLT: %f\n", api.bat_volt());
-  Serial.printf("----------\n");
-  api.lora_send();
-
-  delay(300);
+  if(ms_1000_ev_en)
+    ms_1000_timer = millis();
+  if(ms_100_ev_en)
+    ms_100_timer = millis();
 
   return;
 
@@ -169,7 +167,7 @@ void loop() {
   // printf("integrated: %f %f %f\n", integral_x, integral_y, integral_z);
 
   //Serial.printf("%f %f %f\n", g.gyro.heading, g.gyro.pitch, g.gyro.roll)
-  
+ /* 
   const double BETA               = 3270.0;
   const double MAX_ADC            = 4096.0;
   const double RESITOR2           = 4704.0;
@@ -189,6 +187,25 @@ void loop() {
 
   // Serial.println("");
   delay(100);
+  */
   // sensors_event_t a, g, temp;
   // gyr_sensor.getEvent(&a, &g, &temp);
+}
+
+void sd_save_frame(String s) {
+  Serial.println("sd");
+  String hexstr = "";
+
+  for(int i=0; i<s.length(); i++) {
+    int lower = s[i]&0x0F;
+    int upper = (s[i]&0xF0)>>4;
+    char lc = (lower < 10 ? '0'+lower : 'a'+(lower-10));
+    char uc = (upper < 10 ? '0'+upper : 'a'+(upper-10));
+    hexstr += uc;
+    hexstr += lc;  
+  }
+  hexstr += '\n';
+  //cansat_data.write((const uint8_t*)hexstr.c_str(), hexstr.length());
+  cansat_data.print(hexstr);
+  cansat_data.flush();
 }

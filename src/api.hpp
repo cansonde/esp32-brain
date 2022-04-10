@@ -1,3 +1,5 @@
+#pragma once
+
 #include <DallasTemperature.h>
 #include <Adafruit_BMP280.h>
 #include <Adafruit_MPU6050.h>
@@ -50,6 +52,7 @@ public:
                           Adafruit_BMP280::STANDBY_MS_500);
         m_hum.begin();
         m_gyr.begin();
+        m_gyr.setAccelerometerRange(MPU6050_RANGE_8_G);
 
         lora_init();
 
@@ -121,7 +124,6 @@ public:
             m_gser.setTimeout(20);
             
             String msg = m_gser.readStringUntil('\n');
-            Serial.printf("m: %s\n", msg.c_str());
             if(millis() - time_wait > 2000)
                 return;
 
@@ -132,7 +134,6 @@ public:
             }
             
             Serial.println("Reading updates\n");
-            Serial.printf("msg: '%s'\n", msg.c_str());
 
             sscanf(msg.c_str() + index, "$GPGGA,%f,%f,N,%f,E,%d,%d,%f,%f,%f",
                 &m_gps_time,
@@ -175,18 +176,12 @@ public:
 
     static const size_t FRAME_SIZE = 291/8;
     unsigned char frame [FRAME_SIZE];
-    void lora_send() {
+    void lora_send(String data) {
         // FIXME: test frame, replaace with pointer passed to function
         for(int i=0; i<FRAME_SIZE; i++)
             frame[i] = 0; 
-        
-        frame[0] = 'c';
-        frame[1] = 's';
-        frame[2] = 'u';
-        frame[3] = 's';    
-        frame[4] = '\0';
-
-        
+        for(int i=0; i<min(FRAME_SIZE, data.length()); i++)
+            frame[i] = data[i];
 
         unsigned int time_start = millis();
         while(!LoRa.beginPacket()){
